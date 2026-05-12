@@ -94,8 +94,7 @@ func sortAnswers(m *dns.Msg) {
 
 	clog.Debugf("fastest address: %s (index %d)", addrRRs[fastest].addr, fastest)
 
-	best := addrRRs[fastest]
-	addrRRs = append([]addrRecord{best}, append(addrRRs[:fastest], addrRRs[fastest+1:]...)...)
+	addrRRs = []addrRecord{addrRRs[fastest]}
 
 	m.Answer = make([]dns.RR, 0, len(m.Answer))
 	for _, ar := range addrRRs {
@@ -105,7 +104,7 @@ func sortAnswers(m *dns.Msg) {
 }
 
 const (
-	pingTimeout  = 2 * time.Second
+	pingTimeout  = 1 * time.Second
 	pingData     = "latency-sort"
 	icmpv4Proto  = 1
 	icmpv6Proto  = 58
