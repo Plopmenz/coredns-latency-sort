@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"time"
+	"sync"
 
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/pkg/log"
@@ -104,7 +105,7 @@ func sortAnswers(m *dns.Msg) {
 }
 
 const (
-	pingTimeout  = 1 * time.Second
+	pingTimeout  = 300 * time.Millisecond
 	pingData     = "latency-sort"
 	icmpv4Proto  = 1
 	icmpv6Proto  = 58
@@ -116,9 +117,12 @@ type pingResult struct {
 
 func findFastest(records []addrRecord) int {
 	ch := make(chan pingResult, len(records))
+	var wg sync.WaitGroup
 
 	for i, ar := range records {
+		wg.Add(1)
 		go func(idx int, ip net.IP) {
+			defer wg.Done()
 			_, err := ping(ip)
 			if err == nil {
 				ch <- pingResult{idx}
@@ -126,10 +130,15 @@ func findFastest(records []addrRecord) int {
 		}(i, ar.addr)
 	}
 
+	go func() {
+		wg.Wait()
+		ch <- pingResult{-1} // all pings failed
+	}()
+
 	select {
 	case res := <-ch:
 		return res.idx
-	case <-time.After(pingTimeout + 100*time.Millisecond):
+	case <-time.After(pingTimeout):
 		return -1
 	}
 }
