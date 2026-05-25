@@ -94,14 +94,8 @@ func sortAnswers(m *dns.Msg) {
 	}
 
 	clog.Debugf("fastest address: %s (index %d)", addrRRs[fastest].addr, fastest)
-
-	addrRRs = []addrRecord{addrRRs[fastest]}
-
-	m.Answer = make([]dns.RR, 0, len(m.Answer))
-	for _, ar := range addrRRs {
-		m.Answer = append(m.Answer, ar.rr)
-	}
-	m.Answer = append(m.Answer, others...)
+	
+	m.Answer = append(others, addrRRs[fastest].rr)
 }
 
 const (
@@ -116,7 +110,7 @@ type pingResult struct {
 }
 
 func findFastest(records []addrRecord) int {
-	ch := make(chan pingResult, len(records))
+	ch := make(chan pingResult, len(records)+1)
 	var wg sync.WaitGroup
 
 	for i, ar := range records {
